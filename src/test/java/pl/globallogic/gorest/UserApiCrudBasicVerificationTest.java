@@ -5,8 +5,9 @@ import io.restassured.response.Response;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
-import pl.globallogic.gorest.model.CreateUserRequestDTO;
-import pl.globallogic.gorest.model.CreateUserResponseDTO;
+import pl.globallogic.gorest.dto.CreateUserRequestDTO;
+import pl.globallogic.gorest.dto.CreateUserResponseDTO;
+import pl.globallogic.gorest.model.OurUser;
 
 import java.util.List;
 
@@ -16,11 +17,7 @@ import static org.hamcrest.Matchers.equalTo;
 public class UserApiCrudBasicVerificationTest extends BaseApiTest{
 
     private static final String ENDPOINT = "/users";
-    private static String token = "56ad20c9a5e919880722cc3700318ae818d253da99b7aff59b328e9b303ce777";
     private String ourUserId;
-
-    // token
-    // fixtures jak w python
 
     @BeforeMethod
     public void testSetUp() {
@@ -29,8 +26,6 @@ public class UserApiCrudBasicVerificationTest extends BaseApiTest{
                 new CreateUserRequestDTO("Super User", randomEmail, "male", "active");
         Response res = given().
                 body(userPayload).
-                header("Authorization", "Bearer " + token).
-                contentType(ContentType.JSON).
         when().
                 post(ENDPOINT).
         then().extract().response();
@@ -42,26 +37,24 @@ public class UserApiCrudBasicVerificationTest extends BaseApiTest{
     @Test
     public void shouldFetchAllUsersFromDefaultPageBodyExtract() {
         int expectedListLength = 10;
-        Response res = given().
-                log().all().
-        when().
-                get(ENDPOINT).
-        then().extract().response();
-        List<CreateUserResponseDTO> users = res.jsonPath().getList("", CreateUserResponseDTO.class);
+        Response res =
+            when().
+                    get(ENDPOINT).
+            then().
+                    extract().response();
+
+        List<OurUser> users = res.jsonPath().getList("", OurUser.class);
         logger.info("Users: {}", users);
         Assert.assertEquals(users.size(), expectedListLength);
     }
 
     @Test
     public void shouldFetchAllUsersFromDefaultPageAssertThat() {
-       given().
-                log().all().
        when().
                 get(ENDPOINT).
-        then().
-               assertThat()
-               .body("name[0]", equalTo("Gov. Ajeet Mukhopadhyay"));
-
+       then().
+               assertThat().
+               body("name[0]", equalTo("Super User"));
     }
 
     // should list user data using user id
@@ -70,11 +63,11 @@ public class UserApiCrudBasicVerificationTest extends BaseApiTest{
         String userId = ourUserId;
         given().
                 pathParam("userId", userId).
-                header("Authorization", "Bearer " + token).
         when().
                 get( ENDPOINT + "/{userId}").
         then().
-                log().all();
+                assertThat().
+                body("id", equalTo(Integer.valueOf(ourUserId)));
     }
 
     // should create new user and return id
@@ -87,38 +80,39 @@ public class UserApiCrudBasicVerificationTest extends BaseApiTest{
     public void shouldCreateUserAndReturnId() {
         CreateUserRequestDTO userPayload =
                 new CreateUserRequestDTO("Super User", getRandomEmail(), "male", "active");
-        given().
+        Response res = given().
                 body(userPayload).
-                header("Authorization", "Bearer " + token).
-                contentType(ContentType.JSON).
         when().
                 post(ENDPOINT).
         then().
                 extract().response();
+        CreateUserResponseDTO user = res.as(CreateUserResponseDTO.class);
+        logger.info("User object : {}", user);
+        Assert.assertNotNull(user.id());
 
     }
     // should update info with new information
     @Test
     public void shouldUpdateExistingUserWithNewData() {
         String randomEmail = getRandomEmail();
+        String newName = "Super User";
+        logger.info("New user name: {}", newName);
         CreateUserRequestDTO userPayload =
-                new CreateUserRequestDTO("Super User", randomEmail, "male", "active");
+                new CreateUserRequestDTO(newName, randomEmail, "male", "active");
         given().
                 pathParam("userId", ourUserId).
                 body(userPayload).
-                header("Authorization", "Bearer " + token).
-                contentType(ContentType.JSON).
         when().
                 put(ENDPOINT + "/{userId}").
         then().
-                log().all();
+                assertThat().
+                body("name", equalTo(newName));
     }
     // should delete user from system
     @Test
     public void shouldDeleteExistingUserUsingId() {
         Response res = given().
                 pathParam("userId", ourUserId).
-                header("Authorization", "Bearer " + token).
         when().
                 delete(ENDPOINT + "/{userId}");
         int expectedStatusCode = 204;
