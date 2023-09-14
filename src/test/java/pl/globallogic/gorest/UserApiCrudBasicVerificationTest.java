@@ -65,9 +65,8 @@ public class UserApiCrudBasicVerificationTest extends BaseApiTest{
     }
     @Test
     public void shouldCreateUserAndReturnId() {
-        String randomEmail = getRandomEmail();
         CreateUserRequestDTO userPayload =
-                new CreateUserRequestDTO("Super User", randomEmail, "male", "active");
+                new CreateUserRequestDTO("Super User", getRandomEmail(), "male", "active");
         given().
                 body(userPayload).
                 header("Authorization", "Bearer " + token).
@@ -75,7 +74,7 @@ public class UserApiCrudBasicVerificationTest extends BaseApiTest{
         when().
                 post(ENDPOINT).
         then().
-                log().all();
+                extract().response();
 
     }
     // should update info with new information
