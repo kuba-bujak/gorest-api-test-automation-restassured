@@ -6,8 +6,12 @@ import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import pl.globallogic.gorest.model.CreateUserRequestDTO;
+import pl.globallogic.gorest.model.CreateUserResponseDTO;
+
+import java.util.List;
 
 import static io.restassured.RestAssured.*;
+import static org.hamcrest.Matchers.equalTo;
 
 public class UserApiCrudBasicVerificationTest extends BaseApiTest{
 
@@ -36,14 +40,30 @@ public class UserApiCrudBasicVerificationTest extends BaseApiTest{
 
     // should fetch all users
     @Test
-    public void shouldFetchAllUsersFromDefaultPage() {
-        given().
+    public void shouldFetchAllUsersFromDefaultPageBodyExtract() {
+        int expectedListLength = 10;
+        Response res = given().
                 log().all().
         when().
                 get(ENDPOINT).
-        then().
-                log().all();
+        then().extract().response();
+        List<CreateUserResponseDTO> users = res.jsonPath().getList("", CreateUserResponseDTO.class);
+        logger.info("Users: {}", users);
+        Assert.assertEquals(users.size(), expectedListLength);
     }
+
+    @Test
+    public void shouldFetchAllUsersFromDefaultPageAssertThat() {
+       given().
+                log().all().
+       when().
+                get(ENDPOINT).
+        then().
+               assertThat()
+               .body("name[0]", equalTo("Gov. Ajeet Mukhopadhyay"));
+
+    }
+
     // should list user data using user id
     @Test
     public void userDataShouldContainId() {
